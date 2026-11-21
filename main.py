@@ -188,12 +188,21 @@ class Font:
                     cur = (name, base)
                     self.faces.setdefault(name, {})[base] = (
                         int(parts[3]), int(parts[4]), {})
-                elif parts[0] == "G" and cur is not None:
-                    cp = int(parts[1])
-                    adv, w, h, bear = (int(parts[2]), int(parts[3]),
-                                        int(parts[4]), int(parts[5]))
-                    data = base64.b64decode(parts[6]) if len(parts) > 6 else b""
-                    self.faces[cur[0]][cur[1]][2][cp] = (adv, w, h, bear, data)
+                elif parts[0] == "DATA" and cur is not None:
+                    # One packed line per face/size: records separated by ";",
+                    # each "<cp> <adv> <w> <h> <bear> <b64>" (b64 empty for
+                    # blank glyphs such as space).
+                    for rec in line[5:].strip().split(";"):
+                        flds = rec.split(" ")
+                        if len(flds) < 5:
+                            continue
+                        cp = int(flds[0])
+                        adv, w, h, bear = (int(flds[1]), int(flds[2]),
+                                            int(flds[3]), int(flds[4]))
+                        data = (base64.b64decode(flds[5])
+                                if len(flds) > 5 and flds[5] else b"")
+                        self.faces[cur[0]][cur[1]][2][cp] = (
+                            adv, w, h, bear, data)
         self.cache = {}
         self.pcache = {}
 
